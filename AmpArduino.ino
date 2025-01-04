@@ -10,7 +10,7 @@
 // v0.4   lots of optimalisations, as the code was way to slow
 // v0.5   removed interupt as is was triggered incorrectly,
 //        changed bias and offset reading to change in hardware
-
+//        addopted layout to platformio
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // below definitions could be change by user depending on setup, no code changes needed
 //#define debugAmp                                    // Comment this line when debugAmp mode is not needed
@@ -27,11 +27,11 @@ const bool startUpAtPower = true;                   // if true amp starts if pow
 int startDelayTime = 2;                             // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
 const int numberOfSensorsCh = 1;                    // number of temp sensors / side. value 1 or 2
 const char* toptekst = "";                          // toptext, could be changed
-const char* middleTekst = "        PeWalt, V 0.4";  // Version of the code";
+const char* middleTekst = "        PeWalt, V 0.5";  // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
 #define timeToShowDetailScreen 30000                // time in mS to show detail screen if button pushed
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // pin definitions
 #define powerOnOff A0         // pin connected to the relay handeling power on/off of the amp
 #define relayOutputLeft A1    // pin connected to the relay handeling left output to speaker
@@ -44,7 +44,6 @@ const int numberOffDec = 2 ;                        // number of dec on the scre
 #define buttonStandby 7       // pin connected to button to switch between on and standby
 #define ledStandby 11         // connected to a led that is on if amp is in standby mode
 #define oledReset 12          // connected to the reset port of Oled screen, used to reset Oled screen
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // definitions for the oled screen
 #define oledAddress 0x3C                             // 3C is address used by oled controler
 #define fontH08 u8g2_font_timB08_tr                  // 11w x 11h, char 7h
@@ -56,9 +55,6 @@ const int numberOffDec = 2 ;                        // number of dec on the scre
 #include <U8g2lib.h>                                 // include graphical based character mode library
 #include <Wire.h>
 U8G2_SSD1309_128X64_NONAME0_F_HW_I2C Screen(U8G2_R2,oledReset);  // define the screen type used.
-//U8G2_SSD1309_128X64_NONAME0_F_2ND_HW_I2C Screen(U8G2_R2);  // define the screen type used.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // definitions for the ADC controlers
 int aDCLeftI2CAddress = 0x48;                    // 48 is I2C address used by left ADC controler
 int aDCRightI2CAddress = 0x49;                   // 49 is I2C address used by right ADC controler
@@ -71,7 +67,6 @@ int aDCRightI2CAddress = 0x49;                   // 49 is I2C address used by ri
 float voltageStep = 0.0000625;                   // 2.048 / 32768(15 bits)
 float corOffset = 0;                             // number to convert from measured v to actual V
 float corBias = 0;                               // number to convert from measured v to I
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // definitions for the temp sensors
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -79,7 +74,6 @@ OneWire wireLeft(oneWireLeft);                    // install onewire instance on
 OneWire wireRight(oneWireRight);                  // install onewire instance on the port
 DallasTemperature tempSensorLeft(&wireLeft);      // create left instance
 DallasTemperature tempSensorRight(&wireRight);    // create righ instance
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // button definitions
 #include <ezButton.h>                    // include functions for debounce
 ezButton button(buttonStandby);          // generate an instance of ezButton
@@ -90,7 +84,6 @@ unsigned long releasedTime = 0;          // used to detect pressing of button
 bool isPressing = false;                 // status of button
 bool isLongDetected = false;             // status of button
 bool isShortDetected = false;
-////////////////////////////////////////////////////////////////////////////////////
 // general definitions
 int lowCurBiasInt;                       // convert limit value to int
 int highCurBiasInt;                      // convert limit value to int
@@ -127,10 +120,8 @@ bool showDetailsScreen = true;                    // number of seconds detail sc
 unsigned long timeNowplus1s = 0;                  // used to keep track of time for screen update
 unsigned long conversionTime = 0;                 // used to keep track of time temp conversion
 #include <digitalWriteFast.h>                     // include fast read used within interrupt routine
-/////////////////////////////////////////////////////////////////////////////////
-// detect short and long press 
-/////////////////////////////////////////////////////////////////////////////////
-void checkButton() {
+
+void checkButton() {   // detect short and long press 
   button.loop(); 
   if(button.isPressed()){
     pressedTime = millis();
@@ -151,10 +142,8 @@ void checkButton() {
     }
   }
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// bypass procedure to start amp although their is an issue
-/////////////////////////////////////////////////////////////////////////////////////////////
-void bypassAllow() {
+
+void bypassAllow() {  // bypass procedure to start amp although their is an issue
  #ifdef debugAmp                                   // if debugAmp enabled write message
   Serial.println(F("bypassAllow: waiting "));
  #endif
@@ -178,10 +167,8 @@ void bypassAllow() {
   Serial.println(F("bypassAllow: amp starting, bypass pressed "));
  #endif
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// startup amp, arduino itself and sensors are already active
-///////////////////////////////////////////////////////////////////////////////////////////////
-void startAmp() {    
+
+void startAmp() {    // startup amp, arduino itself and sensors are already active
  #ifdef debugAmp                              // if debugAmp enabled write message
   Serial.println(F("startAmp: starting amp and waiting to stabilize "));
  #endif
@@ -210,10 +197,8 @@ void startAmp() {
   Serial.println(F("startAmp: amp started "));
  #endif
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// turn amp off, arduino itself and sensors stay active
-///////////////////////////////////////////////////////////////////////////////////////////
-void shutDownAmp() {
+
+void shutDownAmp() {   // turn amp off, arduino itself and sensors stay active
  #ifdef debugAmp                              // if debugAmp enabled write message
   Serial.println(F("shutDownAmp: shutdown amp "));
  #endif
@@ -230,10 +215,8 @@ void shutDownAmp() {
   Serial.println(F("shutDownAmp: amp off "));
  #endif
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//   procedure to prevent thump if power fails
-///////////////////////////////////////////////////////////////////////////////////////////////
-void noPower () {
+
+void noPower () {  //   procedure to prevent thump if power fails
   if (opStateRightCh && opStateLeftCh) {
     digitalWriteFast(relayOutputLeft, LOW);            // turn left channel off
     digitalWriteFast(relayOutputRight, LOW);           // turn right channel off
@@ -244,10 +227,8 @@ void noPower () {
     errorCode=0;
   }
 }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// procedure to verify status
-//////////////////////////////////////////////////////////////////////////////////////////
-void defineStatusAmp() {
+
+void defineStatusAmp() {    //procedure to verify status
  #ifdef debugAmp                                 // if debugAmp enabled write message
   Serial.println(F("defineStatusAmp: Starting "));
  #endif
@@ -344,10 +325,8 @@ void defineStatusAmp() {
     printVariables();
  #endif  
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// write values on the screen (state, voltage levels and temperature)
-//////////////////////////////////////////////////////////////////////////////////////////
-void writeValuesScreen() {
+
+void writeValuesScreen() {   // write values on the screen (state, voltage levels and temperature)
   Screen.clearBuffer();         
   // if amp in error display error message 
   if (ampInError) {
@@ -444,10 +423,8 @@ void writeValuesScreen() {
    Serial.println(F("writeValuesScreen: screen updated "));
  #endif  
 }
-// //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// intialisation of the screen after powerup of screen.
-/////////////////////////////////////////////////////////////////////////////////////////////
-void oledSchermInit() {
+
+void oledSchermInit() {    // intialisation of the screen after powerup of screen.
   Screen.setI2CAddress(oledAddress * 2);                               // set oled I2C address
   digitalWrite(oledReset, LOW);                                        // set screen in reset mode
   delay(10);                                                           // wait to stabilize
@@ -464,10 +441,8 @@ void oledSchermInit() {
   Serial.println(F("oledSchermInit: end of procedure"));
  #endif
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// check Analoog Digital converter left and right channel
-/////////////////////////////////////////////////////////////////////////////////////////////
-void aDCInit() {
+
+void aDCInit() {  // check Analoog Digital converter left and right channel
   uint8_t error = 0;
   Wire.beginTransmission(aDCLeftI2CAddress);                                              // test address
   error = Wire.endTransmission();                                               // resolve errorcode
@@ -490,10 +465,9 @@ void aDCInit() {
  #ifdef debugAmp
   Serial.println(F("aDCInit: init of ADC's done"));
  #endif
-}/////////////////////////////////////////////////////////////////////////////////////
-//
-/////////////////////////////////////////////////////////////////////////////////////
-void tempInit() {
+}
+
+void tempInit() {    // intialisation of the temp sensors
   int numberOfSensorsLeft;
   int numberOfSensorsRight;
  #ifdef debugAmp
@@ -555,10 +529,8 @@ void tempInit() {
   }
  #endif  
 }
-///////////////////////////////////////////////////////////////////////////////////////
-// read the temperature sensors, request to do conversion is already done
-///////////////////////////////////////////////////////////////////////////////////////
-void readTempLevels() {
+
+void readTempLevels() {   // read the temperature sensors, request to do conversion is already done
   int temp1;
   int temp2 = 0; 
   temp1 = round(tempSensorLeft.getTempC(addrTempLeftS1));
@@ -610,18 +582,12 @@ void readTempLevels() {
  #endif       
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// start conversion of temp sensors
-//////////////////////////////////////////////////////////////////////////////////////////////
-void startconversion() { 
+void startconversion() {  // start conversion of temp sensors
   tempSensorLeft.requestTemperatures();
   tempSensorRight.requestTemperatures();
 }
-//////////////////////////////////////////////////////////////////////////////////////////
-// function to check i2c bus
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
- #ifdef debugAmp
+ #ifdef debugAmp  // function to check i2c bus
 void scanI2CBus() {
   uint8_t error;                                                      // error code
   uint8_t address;                                                    // address to be tested
@@ -652,10 +618,8 @@ void scanI2CBus() {
   }
 }
  #endif
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// function to print variables in debug mode
-///////////////////////////////////////////////////////////////////////////////////////////
- #ifdef debugAmp
+
+ #ifdef debugAmp  // function to print variables in debug mode
 void printVariables () {
   Serial.println(F("PrintVariables :"));
   Serial.print(F("temp sensors reachable          : "));
@@ -679,20 +643,15 @@ void printVariables () {
 } 
  #endif
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// function to print a device address
-//////////////////////////////////////////////////////////////////////////////////////////
-void printAddress(DeviceAddress deviceAddress) {
+void printAddress(DeviceAddress deviceAddress) {  // function to print a device address
   for (uint8_t i = 0; i < 8; i++) {
     if (deviceAddress[i] < 16) Serial.print("0");
       Serial.print(deviceAddress[i], HEX);
   }
   Serial.println();
 }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// define the position of the cursor right side depending on the length and sign of the value
-///////////////////////////////////////////////////////////////////////////////////////////////
-int rightSidePos (int value, int dec) {
+
+int rightSidePos (int value, int dec) {  // define the position of the cursor right side depending on the length and sign of the value
   if (value >= 0) {
     if (value < 1000) {
       if (dec == 0) {return(112);}
@@ -719,10 +678,8 @@ int rightSidePos (int value, int dec) {
   }
   return(92);
 }
-///////////////////////////////////////////////////////////////////////////////////////////////
-// define the position of the cursor left side depending on the length and sign of the value
-///////////////////////////////////////////////////////////////////////////////////////////////
-int leftSidePos (int value) {
+
+int leftSidePos (int value) {  // define the position of the cursor left side depending on the length and sign of the value
   if (value >= 0) {
     if (value < 1000) {return(10);}
     else {return(5);}
@@ -732,10 +689,8 @@ int leftSidePos (int value) {
     else {return(0);}  
   } 
 }
-////////////////////////////////////////////////////////////////////////////////////////////
-// measure voltage
-////////////////////////////////////////////////////////////////////////////////////////////
-int readVoltage (int i2cAddress, uint8_t whatToMeasure, float correction) {
+
+int readVoltage (int i2cAddress, uint8_t whatToMeasure, float correction) {  // measure voltage
   int sampleRaw = 0;
   Wire.beginTransmission(i2cAddress);
   Wire.write(SelectConfigRegister);
@@ -754,17 +709,13 @@ int readVoltage (int i2cAddress, uint8_t whatToMeasure, float correction) {
   Wire.endTransmission();
   return(round(sampleRaw*correction));
 }
-////////////////////////////////////////////////////////////////////////////////////////////
-// measure voltage
-////////////////////////////////////////////////////////////////////////////////////////////
-int measureBias (int i2cAddress) {
+
+int measureBias (int i2cAddress) {   // measure bias
   int BiasPlusSide=readVoltage(i2cAddress,measureBiasPlus,corBias);
   return(BiasPlusSide-readVoltage(i2cAddress,measureBiasMinus,corBias));
 }
-///////////////////////////////////////////////////////////////////////////////////////
-// wait till de conversion of the ADC is done
-///////////////////////////////////////////////////////////////////////////////////////
-void waitTillConvReady(int i2cAddress)
+
+void waitTillConvReady(int i2cAddress)  // wait till de conversion of the ADC is done
 {
   uint8_t busyBit;
 
@@ -781,10 +732,8 @@ void waitTillConvReady(int i2cAddress)
   }
   while ((busyBit & 0x80) == 0);  // Check for Busy flag
 }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Setup
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void setup() {
+
+void setup() {   // Setup
   corOffset = (((resistorLow + resistorHigh)) / resistorLow) * voltageStep * 100.0;   
   corBias =  (corOffset/biasResistor);
   lowCurBiasInt = round(lowCurBiasFloat * 100);              // convert to int
@@ -838,10 +787,8 @@ void setup() {
   Serial.println(F("setup: end of setup proc"));
  #endif
 }
-//////////////////////////////////////////////////////////////////////////////////////////////
-// Main loop
-//////////////////////////////////////////////////////////////////////////////////////////////
-void loop() {
+
+void loop() {   // Main loop
   timeNowplus1s = millis() + 1000;
   while (millis() < timeNowplus1s) {      //only update the screen every second
     if (ampPoweredOn) {
