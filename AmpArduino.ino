@@ -27,7 +27,7 @@ const bool startUpAtPower = true;                   // if true amp starts if pow
 int startDelayTime = 2;                             // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
 const int numberOfSensorsCh = 1;                    // number of temp sensors / side. value 1 or 2
 const char* toptekst = "";                          // toptext, could be changed
-const char* middleTekst = "        PeWalt, V 0.5";  // Version of the code";
+const char* middleTekst = "        PeWalt, V 0.6";  // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
 #define timeToShowDetailScreen 30000                // time in mS to show detail screen if button pushed
