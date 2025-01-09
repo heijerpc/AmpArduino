@@ -54,7 +54,7 @@ const int numberOffDec = 2 ;                        // number of dec on the scre
 #include <arduino.h>
 #include <U8g2lib.h>                                 // include graphical based character mode library
 #include <Wire.h>
-U8G2_SSD1309_128X64_NONAME0_F_HW_I2C Screen(U8G2_R2,oledReset);  // define the screen type used.
+U8G2_SSD1309_128X64_NONAME0_F_HW_I2C Screen(U8G2_R0,oledReset);  // define the screen type used.
 // definitions for the ADC controlers
 int aDCLeftI2CAddress = 0x48;                    // 48 is I2C address used by left ADC controler
 int aDCRightI2CAddress = 0x49;                   // 49 is I2C address used by right ADC controler
@@ -425,17 +425,17 @@ void writeValuesScreen() {   // write values on the screen (state, voltage level
 }
 
 void oledSchermInit() {    // intialisation of the screen after powerup of screen.
-  Screen.setI2CAddress(oledAddress * 2);                               // set oled I2C address
+
   digitalWrite(oledReset, LOW);                                        // set screen in reset mode
   delay(10);                                                           // wait to stabilize
   digitalWrite(oledReset, HIGH);                                       // set screen active
   delay(110);  
+  Screen.setI2CAddress(oledAddress * 2);                               // set oled I2C address
   Screen.initDisplay();
-  delay(5);
   Screen.clearDisplay();
-  delay(5);
-  Screen.setPowerSave(0);
+  Screen.setPowerSave(1);
   Screen.setContrast((((contrastLevelScreen * 2) + 1) << 4) | 0x0f);   // set contrast level, reduce number of options
+  Screen.setFlipMode(1);
   
  #ifdef debugAmp
   Serial.println(F("oledSchermInit: end of procedure"));
