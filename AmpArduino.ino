@@ -17,20 +17,23 @@
 const int contrastLevelScreen = 5;                  // contrastlevel of screen, value 1 - 7
 const int resistorLow = 50;                         // low value resistor in voltage divider in Kohm
 const int resistorHigh = 600;                       // high value resistor in voltage divider in Kohm
-const int biasResistor = 1;                      // value of bias resistor in Ohm   
-const float lowCurBiasFloat = -2.0;                 // low cutoff value bias in A, 1 decimals
-const float highCurBiasFloat = 2.0;                 // high cutoff value bias in A, 1 decimals
+const float biasResistor = 0.47;                    // value of bias resistor in Ohm 
+const int biasMultiplier = 2;                       // multiplier of bias resistor  
+const float lowCurBiasFloat = -0.0;                 // low cutoff value bias in A, 1 decimals
+const float highCurBiasFloat = 2.5;                 // high cutoff value bias in A, 1 decimals
 const float lowDCOffsetFloat = -1.0;                // low cutoff value DC offset in V, 1 decimal
 const float highDCOffsetFloat = 1.0;                // high cutoff value DC offset in V, 1 decimal
-const int highTemp = 70;                            // high temp cutoff in Celcius
+const int highTemp = 60;                            // high temp cutoff in Celcius
 const bool startUpAtPower = true;                   // if true amp starts if power applied, if false it will be in standby mode
 int startDelayTime = 2;                             // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
-const int numberOfSensorsCh = 1;                    // number of temp sensors / side. value 1 or 2
+const int numberOfSensorsCh = 2;                    // number of temp sensors / side. value 1 or 2
 const char* toptekst = "";                          // toptext, could be changed
-const char* middleTekst = "        PeWalt, V 0.6";  // Version of the code";
+const char* middleTekst = "        PeWalt, V 0.7";  // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
-#define timeToShowDetailScreen 30000                // time in mS to show detail screen if button pushed
+const unsigned long timeToShowDetailScreen=30000;    // time in mS to show detail screen if button pushed
+#define correctionOffsetBiasLeft 0
+#define correctionOffsetBiasRight 12
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // pin definitions
 #define powerOnOff A0         // pin connected to the relay handeling power on/off of the amp
@@ -54,7 +57,7 @@ const int numberOffDec = 2 ;                        // number of dec on the scre
 #include <arduino.h>
 #include <U8g2lib.h>                                 // include graphical based character mode library
 #include <Wire.h>
-U8G2_SSD1309_128X64_NONAME0_F_HW_I2C Screen(U8G2_R0,oledReset);  // define the screen type used.
+U8G2_SSD1309_128X64_NONAME0_F_HW_I2C Screen(U8G2_R0);  // define the screen type used.
 // definitions for the ADC controlers
 int aDCLeftI2CAddress = 0x48;                    // 48 is I2C address used by left ADC controler
 int aDCRightI2CAddress = 0x49;                   // 49 is I2C address used by right ADC controler
@@ -93,6 +96,8 @@ bool aDCOn = true;                       // measure voltage ?
 bool tempOn = true;                      // measure temperature ?
 int dCOffsetLeft;                        // voltage level output channel left * 100
 int dCOffsetRight;                       // voltage level output channel left * 100
+int dCoffsetLeftOld;                     // old value of dcoffset left
+int dCoffsetRightOld;                    // old value of dcoffset right
 int ampsBiasLeft;                        // voltage level bias left channel * 100
 int ampsBiasRight;                       // voltage level bias left channel * 100
 int tempLeft;                            // tempature of left channel
@@ -116,10 +121,10 @@ const char errorMessages [7][27] = {     // error codes starting with 0
   "temp right (C)    : "
 };
 bool ampPoweredOn = false;                        // defines if amp is powered on. 
-bool showDetailsScreen = true;                    // number of seconds detail screen is shown.
+bool showDetailsScreen = true;                    // show details screen
 unsigned long timeNowplus1s = 0;                  // used to keep track of time for screen update
 unsigned long conversionTime = 0;                 // used to keep track of time temp conversion
-#include <digitalWriteFast.h>                     // include fast read used within interrupt routine
+#include <digitalWriteFast.h>                     // include fast read
 
 void checkButton() {   // detect short and long press 
   button.loop(); 
@@ -230,7 +235,7 @@ void noPower () {  //   procedure to prevent thump if power fails
 
 void defineStatusAmp() {    //procedure to verify status
  #ifdef debugAmp                                 // if debugAmp enabled write message
-  Serial.println(F("defineStatusAmp: Starting "));
+  Serial.println(F("defineStatusAmp: checking status "));
  #endif
   bool newStatusLeft = true;
   bool newStatusRight = true;
@@ -312,9 +317,6 @@ void defineStatusAmp() {    //procedure to verify status
       digitalWrite(relayOutputLeft, HIGH);
       digitalWrite(relayOutputRight, HIGH);
     }
-  } 
-  else {
-    showDetailsScreen = true;
   }
   #ifdef debugAmp               // if debugAmp enabled write message
     
@@ -341,6 +343,7 @@ void writeValuesScreen() {   // write values on the screen (state, voltage level
     if (errorCode > 4) {
       Screen.print(errorValue);  
     }
+    Screen.sendBuffer();
     while (true);   
   }
   // display detail screen
@@ -433,10 +436,10 @@ void oledSchermInit() {    // intialisation of the screen after powerup of scree
   Screen.setI2CAddress(oledAddress * 2);                               // set oled I2C address
   Screen.initDisplay();
   Screen.clearDisplay();
-  Screen.setPowerSave(1);
   Screen.setContrast((((contrastLevelScreen * 2) + 1) << 4) | 0x0f);   // set contrast level, reduce number of options
   Screen.setFlipMode(1);
-  
+  Screen.setPowerSave(0);  
+
  #ifdef debugAmp
   Serial.println(F("oledSchermInit: end of procedure"));
  #endif
@@ -711,7 +714,10 @@ int readVoltage (int i2cAddress, uint8_t whatToMeasure, float correction) {  // 
 }
 
 int measureBias (int i2cAddress) {   // measure bias
+  
   int BiasPlusSide=readVoltage(i2cAddress,measureBiasPlus,corBias);
+  Serial.println(BiasPlusSide);     ////////////////////weg
+  Serial.println(readVoltage(i2cAddress,measureBiasMinus,corBias)); ////////////weg
   return(BiasPlusSide-readVoltage(i2cAddress,measureBiasMinus,corBias));
 }
 
@@ -735,7 +741,7 @@ void waitTillConvReady(int i2cAddress)  // wait till de conversion of the ADC is
 
 void setup() {   // Setup
   corOffset = (((resistorLow + resistorHigh)) / resistorLow) * voltageStep * 100.0;   
-  corBias =  (corOffset/biasResistor);
+  corBias =  biasMultiplier * (corOffset/biasResistor);      // multiply if setup of ammp requires it 
   lowCurBiasInt = round(lowCurBiasFloat * 100);              // convert to int
   highCurBiasInt = round(highCurBiasFloat * 100);            // convert to int
   lowDCOffsetInt = round(lowDCOffsetFloat * 100);            // convert to int
@@ -793,14 +799,14 @@ void loop() {   // Main loop
   while (millis() < timeNowplus1s) {      //only update the screen every second
     if (ampPoweredOn) {
       if (!digitalReadFast(detect230V)) noPower();
-      ////loop through the detail screen
+      ////loop through(showDetailsScreen the detail screen
       while (showDetailsScreen)  {           //detail screen only active in specific cases
         if (!digitalReadFast(detect230V)) noPower();
         if (aDCOn) {                         //if we can measure voltages
           dCOffsetLeft=readVoltage(aDCLeftI2CAddress,measureDCOfset,corOffset);
           dCOffsetRight=readVoltage(aDCRightI2CAddress,measureDCOfset,corOffset);
-          ampsBiasLeft=measureBias(aDCLeftI2CAddress);
-          ampsBiasRight=measureBias(aDCRightI2CAddress);
+          ampsBiasLeft=measureBias(aDCLeftI2CAddress)+correctionOffsetBiasLeft;
+          ampsBiasRight=measureBias(aDCRightI2CAddress)+correctionOffsetBiasRight;
         }
         if (tempOn) {                        //if we can read temp
           if (conversionTime == 0) { 
@@ -827,14 +833,18 @@ void loop() {   // Main loop
           isLongDetected = false;
         }
         // only leave detail screen after timeToShowDetailScreen sec and if amp is fully operational
-        if ((millis() > (timeNowplus1s + timeToShowDetailScreen)) and (opStateLeftCh) and (opStateRightCh)) {
+        if (((millis() > (timeNowplus1s + timeToShowDetailScreen)) and (opStateLeftCh) and (opStateRightCh))) {
           showDetailsScreen = false;
         }
-      // or loop through overview screen measure dc offset and temp
+      // or loop through overview screen measure dc offset and temp 
       }
       if (aDCOn) {
+        dCoffsetLeftOld=dCOffsetLeft;        /// average old and new measurements
+        dCoffsetRightOld=dCOffsetRight;
         dCOffsetLeft=readVoltage(aDCLeftI2CAddress,measureDCOfset,corOffset);
         dCOffsetRight=readVoltage(aDCRightI2CAddress,measureDCOfset,corOffset);
+        dcoffsetLeft= (dCoffsetLeftOld + dCOffsetLeft) / 2; 
+        dcoffsetRight= (dCoffsetRightOld + dCOffsetRight) / 2;
       }
       if (tempOn) {
         if (conversionTime == 0) { 
