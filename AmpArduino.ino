@@ -28,7 +28,7 @@ const bool startUpAtPower = true;                   // if true amp starts if pow
 int startDelayTime = 2;                             // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
 const int numberOfSensorsCh = 2;                    // number of temp sensors / side. value 1 or 2
 const char* toptekst = "";                          // toptext, could be changed
-const char* middleTekst = "        PeWalt, V 0.7";  // Version of the code";
+const char* middleTekst = "        PeWalt, V 1.0";  // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
 const unsigned long timeToShowDetailScreen=30000;    // time in mS to show detail screen if button pushed
@@ -96,8 +96,8 @@ bool aDCOn = true;                       // measure voltage ?
 bool tempOn = true;                      // measure temperature ?
 int dCOffsetLeft;                        // voltage level output channel left * 100
 int dCOffsetRight;                       // voltage level output channel left * 100
-int dCoffsetLeftOld;                     // old value of dcoffset left
-int dCoffsetRightOld;                    // old value of dcoffset right
+int dCOffsetLeftOld;                     // old value of dcoffset left
+int dCOffsetRightOld;                    // old value of dcoffset right
 int ampsBiasLeft;                        // voltage level bias left channel * 100
 int ampsBiasRight;                       // voltage level bias left channel * 100
 int tempLeft;                            // tempature of left channel
@@ -839,12 +839,12 @@ void loop() {   // Main loop
       // or loop through overview screen measure dc offset and temp 
       }
       if (aDCOn) {
-        dCoffsetLeftOld=dCOffsetLeft;        /// average old and new measurements
-        dCoffsetRightOld=dCOffsetRight;
+        dCOffsetLeftOld=dCOffsetLeft;        /// average old and new measurements
+        dCOffsetRightOld=dCOffsetRight;
         dCOffsetLeft=readVoltage(aDCLeftI2CAddress,measureDCOfset,corOffset);
         dCOffsetRight=readVoltage(aDCRightI2CAddress,measureDCOfset,corOffset);
-        dcoffsetLeft= (dCoffsetLeftOld + dCOffsetLeft) / 2; 
-        dcoffsetRight= (dCoffsetRightOld + dCOffsetRight) / 2;
+        dCOffsetLeft= (dCOffsetLeftOld + dCOffsetLeft) / 2; 
+        dCOffsetRight= (dCOffsetRightOld + dCOffsetRight) / 2;
       }
       if (tempOn) {
         if (conversionTime == 0) { 
