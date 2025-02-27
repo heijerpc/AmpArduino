@@ -25,10 +25,10 @@ const float lowDCOffsetFloat = -1.0;                // low cutoff value DC offse
 const float highDCOffsetFloat = 1.0;                // high cutoff value DC offset in V, 1 decimal
 const int highTemp = 60;                            // high temp cutoff in Celcius
 const bool startUpAtPower = true;                   // if true amp starts if power applied, if false it will be in standby mode
-int startDelayTime = 2;                             // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
+int startDelayTime = 10;                            // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
 const int numberOfSensorsCh = 2;                    // number of temp sensors / side. value 1 or 2
-const char* toptekst = "";                          // toptext, could be changed
-const char* middleTekst = "        PeWalt, V 1.0";  // Version of the code";
+const char* toptekst = "PeWalt, V 1.0";             // toptext, could be changed
+const char* middleTekst = "       AMP warming up";  // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
 const unsigned long timeToShowDetailScreen=30000;    // time in mS to show detail screen if button pushed
@@ -187,7 +187,7 @@ void startAmp() {    // startup amp, arduino itself and sensors are already acti
   Screen.setCursor(13, 63);                   // set cursur in correct position
   Screen.print(bottemTekst);                  // write tekst to buffer
   Screen.setFont(fontH10);                    // choose a suitable font
-  Screen.setCursor(5, 28);                    // set cursur in correct position
+  Screen.setCursor(0, 28);                    // set cursur in correct position
   Screen.print(middleTekst);                  // write please wait
   Screen.sendBuffer();
   if (startDelayTime < 2) {
@@ -438,6 +438,7 @@ void oledSchermInit() {    // intialisation of the screen after powerup of scree
   Screen.clearDisplay();
   Screen.setContrast((((contrastLevelScreen * 2) + 1) << 4) | 0x0f);   // set contrast level, reduce number of options
   Screen.setFlipMode(1);
+  Screen.clearDisplay();
   Screen.setPowerSave(0);  
 
  #ifdef debugAmp
