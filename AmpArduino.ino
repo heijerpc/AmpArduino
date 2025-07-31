@@ -11,6 +11,7 @@
 // v0.5   removed interupt as is was triggered incorrectly,
 //        changed bias and offset reading to change in hardware
 //        addopted layout to platformio
+// v1.1   moved back to interupt removing fastwrite
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // below definitions could be change by user depending on setup, no code changes needed
 //#define debugAmp                                    // Comment this line when debugAmp mode is not needed
@@ -96,8 +97,6 @@ bool aDCOn = true;                       // measure voltage ?
 bool tempOn = true;                      // measure temperature ?
 int dCOffsetLeft;                        // voltage level output channel left * 100
 int dCOffsetRight;                       // voltage level output channel left * 100
-int dCOffsetLeftOld;                     // old value of dcoffset left
-int dCOffsetRightOld;                    // old value of dcoffset right
 int ampsBiasLeft;                        // voltage level bias left channel * 100
 int ampsBiasRight;                       // voltage level bias left channel * 100
 int tempLeft;                            // tempature of left channel
@@ -124,7 +123,6 @@ bool ampPoweredOn = false;                        // defines if amp is powered o
 bool showDetailsScreen = true;                    // show details screen
 unsigned long timeNowplus1s = 0;                  // used to keep track of time for screen update
 unsigned long conversionTime = 0;                 // used to keep track of time temp conversion
-//include <digitalWriteFast.h>                     // include fast read
 
 void checkButton() {   // detect short and long press 
   button.loop(); 
@@ -717,8 +715,6 @@ int readVoltage (int i2cAddress, uint8_t whatToMeasure, float correction) {  // 
 int measureBias (int i2cAddress) {   // measure bias
   
   int BiasPlusSide=readVoltage(i2cAddress,measureBiasPlus,corBias);
- // Serial.println(BiasPlusSide);     ////////////////////weg
- // Serial.println(readVoltage(i2cAddress,measureBiasMinus,corBias)); ////////////weg
   return(BiasPlusSide-readVoltage(i2cAddress,measureBiasMinus,corBias));
 }
 
@@ -800,10 +796,7 @@ void loop() {   // Main loop
   timeNowplus1s = millis() + 1000;
   while (millis() < timeNowplus1s) {      //only update the screen every second
     if (ampPoweredOn) {
-  //    if (!digitalReadFast(detect230V)) noPower();
-      ////loop through(showDetailsScreen the detail screen
       while (showDetailsScreen)  {           //detail screen only active in specific cases
-   //     if (!digitalReadFast(detect230V)) noPower();
         if (aDCOn) {                         //if we can measure voltages
           dCOffsetLeft=readVoltage(aDCLeftI2CAddress,measureDCOfset,corOffset);
           dCOffsetRight=readVoltage(aDCRightI2CAddress,measureDCOfset,corOffset);
@@ -841,12 +834,8 @@ void loop() {   // Main loop
       // or loop through overview screen measure dc offset and temp 
       }
       if (aDCOn) {
- //       dCOffsetLeftOld=dCOffsetLeft;        /// average old and new measurements
- //       dCOffsetRightOld=dCOffsetRight;
         dCOffsetLeft=readVoltage(aDCLeftI2CAddress,measureDCOfset,corOffset);
         dCOffsetRight=readVoltage(aDCRightI2CAddress,measureDCOfset,corOffset);
- //       dCOffsetLeft= (dCOffsetLeftOld + dCOffsetLeft) / 2; 
- //       dCOffsetRight= (dCOffsetRightOld + dCOffsetRight) / 2;
       }
       if (tempOn) {
         if (conversionTime == 0) { 
