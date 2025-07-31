@@ -11,6 +11,7 @@
 // v0.5   removed interupt as is was triggered incorrectly,
 //        changed bias and offset reading to change in hardware
 //        addopted layout to platformio
+// v1.1   moved back to interupt removing fastwrite
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // below definitions could be change by user depending on setup, no code changes needed
 //#define debugAmp                                    // Comment this line when debugAmp mode is not needed
@@ -25,10 +26,10 @@ const float lowDCOffsetFloat = -1.0;                // low cutoff value DC offse
 const float highDCOffsetFloat = 1.0;                // high cutoff value DC offset in V, 1 decimal
 const int highTemp = 60;                            // high temp cutoff in Celcius
 const bool startUpAtPower = true;                   // if true amp starts if power applied, if false it will be in standby mode
-int startDelayTime = 2;                             // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
+int startDelayTime = 20;                            // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
 const int numberOfSensorsCh = 2;                    // number of temp sensors / side. value 1 or 2
-const char* toptekst = "";                          // toptext, could be changed
-const char* middleTekst = "        PeWalt, V 1.0";  // Version of the code";
+const char* toptekst = "PeWalt, V 1.0";             // toptext, could be changed
+const char* middleTekst = "     AMP warming up";    // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
 const unsigned long timeToShowDetailScreen=30000;    // time in mS to show detail screen if button pushed
@@ -96,8 +97,6 @@ bool aDCOn = true;                       // measure voltage ?
 bool tempOn = true;                      // measure temperature ?
 int dCOffsetLeft;                        // voltage level output channel left * 100
 int dCOffsetRight;                       // voltage level output channel left * 100
-int dCOffsetLeftOld;                     // old value of dcoffset left
-int dCOffsetRightOld;                    // old value of dcoffset right
 int ampsBiasLeft;                        // voltage level bias left channel * 100
 int ampsBiasRight;                       // voltage level bias left channel * 100
 int tempLeft;                            // tempature of left channel
@@ -124,7 +123,6 @@ bool ampPoweredOn = false;                        // defines if amp is powered o
 bool showDetailsScreen = true;                    // show details screen
 unsigned long timeNowplus1s = 0;                  // used to keep track of time for screen update
 unsigned long conversionTime = 0;                 // used to keep track of time temp conversion
-#include <digitalWriteFast.h>                     // include fast read
 
 void checkButton() {   // detect short and long press 
   button.loop(); 
@@ -187,7 +185,7 @@ void startAmp() {    // startup amp, arduino itself and sensors are already acti
   Screen.setCursor(13, 63);                   // set cursur in correct position
   Screen.print(bottemTekst);                  // write tekst to buffer
   Screen.setFont(fontH10);                    // choose a suitable font
-  Screen.setCursor(5, 28);                    // set cursur in correct position
+  Screen.setCursor(0, 38);                    // set cursur in correct position
   Screen.print(middleTekst);                  // write please wait
   Screen.sendBuffer();
   if (startDelayTime < 2) {
@@ -222,15 +220,15 @@ void shutDownAmp() {   // turn amp off, arduino itself and sensors stay active
 }
 
 void noPower () {  //   procedure to prevent thump if power fails
-  if (opStateRightCh && opStateLeftCh) {
-    digitalWriteFast(relayOutputLeft, LOW);            // turn left channel off
-    digitalWriteFast(relayOutputRight, LOW);           // turn right channel off
-    digitalWriteFast(powerOnOff, LOW); 
+ // if (opStateRightCh && opStateLeftCh) {
+    digitalWrite(relayOutputLeft, LOW);            // turn left channel off
+    digitalWrite(relayOutputRight, LOW);           // turn right channel off
+    digitalWrite(powerOnOff, LOW); 
     opStateLeftCh = false;
     opStateRightCh = false;
     ampInError = true;                            // amp is in error
     errorCode=0;
-  }
+//  }
 }
 
 void defineStatusAmp() {    //procedure to verify status
@@ -301,9 +299,9 @@ void defineStatusAmp() {    //procedure to verify status
  #ifdef debugAmp               // if debugAmp enabled write message
     Serial.println(F("defineStatusAmp: shutdown amp due to error "));
  #endif    
-    digitalWriteFast(relayOutputLeft, LOW);
-    digitalWriteFast(relayOutputRight, LOW);
-    digitalWriteFast(powerOnOff, LOW);            
+    digitalWrite(relayOutputLeft, LOW);
+    digitalWrite(relayOutputRight, LOW);
+    digitalWrite(powerOnOff, LOW);            
     digitalWrite(ledStandby, HIGH);            
   }
   if (!(opStateRightCh && opStateLeftCh && (!ampInError))) {
@@ -438,6 +436,7 @@ void oledSchermInit() {    // intialisation of the screen after powerup of scree
   Screen.clearDisplay();
   Screen.setContrast((((contrastLevelScreen * 2) + 1) << 4) | 0x0f);   // set contrast level, reduce number of options
   Screen.setFlipMode(1);
+  Screen.clearDisplay();
   Screen.setPowerSave(0);  
 
  #ifdef debugAmp
@@ -716,8 +715,6 @@ int readVoltage (int i2cAddress, uint8_t whatToMeasure, float correction) {  // 
 int measureBias (int i2cAddress) {   // measure bias
   
   int BiasPlusSide=readVoltage(i2cAddress,measureBiasPlus,corBias);
-  Serial.println(BiasPlusSide);     ////////////////////weg
-  Serial.println(readVoltage(i2cAddress,measureBiasMinus,corBias)); ////////////weg
   return(BiasPlusSide-readVoltage(i2cAddress,measureBiasMinus,corBias));
 }
 
@@ -792,16 +789,14 @@ void setup() {   // Setup
  #ifdef debugAmp
   Serial.println(F("setup: end of setup proc"));
  #endif
+ attachInterrupt(digitalPinToInterrupt(detect230V), noPower, FALLING);
 }
 
 void loop() {   // Main loop
   timeNowplus1s = millis() + 1000;
   while (millis() < timeNowplus1s) {      //only update the screen every second
     if (ampPoweredOn) {
-      if (!digitalReadFast(detect230V)) noPower();
-      ////loop through(showDetailsScreen the detail screen
       while (showDetailsScreen)  {           //detail screen only active in specific cases
-        if (!digitalReadFast(detect230V)) noPower();
         if (aDCOn) {                         //if we can measure voltages
           dCOffsetLeft=readVoltage(aDCLeftI2CAddress,measureDCOfset,corOffset);
           dCOffsetRight=readVoltage(aDCRightI2CAddress,measureDCOfset,corOffset);
@@ -839,12 +834,8 @@ void loop() {   // Main loop
       // or loop through overview screen measure dc offset and temp 
       }
       if (aDCOn) {
-        dCOffsetLeftOld=dCOffsetLeft;        /// average old and new measurements
-        dCOffsetRightOld=dCOffsetRight;
         dCOffsetLeft=readVoltage(aDCLeftI2CAddress,measureDCOfset,corOffset);
         dCOffsetRight=readVoltage(aDCRightI2CAddress,measureDCOfset,corOffset);
-        dCOffsetLeft= (dCOffsetLeftOld + dCOffsetLeft) / 2; 
-        dCOffsetRight= (dCOffsetRightOld + dCOffsetRight) / 2;
       }
       if (tempOn) {
         if (conversionTime == 0) { 
