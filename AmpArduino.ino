@@ -28,7 +28,7 @@ const int highTemp = 60;                            // high temp cutoff in Celci
 const bool startUpAtPower = true;                   // if true amp starts if power applied, if false it will be in standby mode
 int startDelayTime = 20;                            // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
 const int numberOfSensorsCh = 2;                    // number of temp sensors / side. value 1 or 2
-const char* toptekst = "PeWalt, V 1.0";             // toptext, could be changed
+const char* toptekst = "Aleph J, V 1.1";            // toptext, could be changed
 const char* middleTekst = "     AMP warming up";    // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
@@ -67,7 +67,7 @@ int aDCRightI2CAddress = 0x49;                   // 49 is I2C address used by ri
 #define measureDCOfset 0b10010101                //Read dif ain0-3, 2.048V, Single Shot
 #define measureBiasPlus 0b10100101               //Read dif ain1-3, 2.048V, Single Shot
 #define measureBiasMinus 0b10110101              //Read dif ain2-3, 2.048V, Single Shot
-#define numOfSample 0b10100011                   //250 samples/sec
+#define numOfSample 0b10100011                   //250 samples/sec 
 float voltageStep = 0.0000625;                   // 2.048 / 32768(15 bits)
 float corOffset = 0;                             // number to convert from measured v to actual V
 float corBias = 0;                               // number to convert from measured v to I
