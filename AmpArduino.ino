@@ -12,6 +12,7 @@
 //        changed bias and offset reading to change in hardware
 //        addopted layout to platformio
 // v1.1   moved back to interupt removing fastwrite
+// v1.2   added offset correction
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // below definitions could be change by user depending on setup, no code changes needed
 //#define debugAmp                                    // Comment this line when debugAmp mode is not needed
@@ -24,11 +25,13 @@ const float lowCurBiasFloat = -0.0;                 // low cutoff value bias in 
 const float highCurBiasFloat = 2.5;                 // high cutoff value bias in A, 1 decimals
 const float lowDCOffsetFloat = -1.0;                // low cutoff value DC offset in V, 1 decimal
 const float highDCOffsetFloat = 1.0;                // high cutoff value DC offset in V, 1 decimal
+const int dCGeneralOffsetLeft = 0;                  // general offset corrention in 10 mV, depending on installation
+const int dCGeneralOffsetRight = 1;                 // general offset corrention in 10 mV, depending on installation
 const int highTemp = 60;                            // high temp cutoff in Celcius
 const bool startUpAtPower = true;                   // if true amp starts if power applied, if false it will be in standby mode
 int startDelayTime = 20;                            // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
 const int numberOfSensorsCh = 2;                    // number of temp sensors / side. value 1 or 2
-const char* toptekst = "Aleph J, V 1.1";            // toptext, could be changed
+const char* toptekst = "  Aleph J, V 1.2";          // toptext, could be changed
 const char* middleTekst = "     AMP warming up";    // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
@@ -357,6 +360,8 @@ void writeValuesScreen() {   // write values on the screen (state, voltage level
     else {Screen.drawGlyph(108, 16 , 0x2715);}
     Screen.setFont(fontH08fixed);
     if (aDCOn) {
+      dCOffsetLeft = dCOffsetLeft + dCGeneralOffsetLeft;
+      dCOffsetRight = dCOffsetRight + dCGeneralOffsetRight;
       Screen.setCursor(42, 40);
       Screen.print(F("DCoffset(V)"));
       Screen.setCursor(50, 51); 
