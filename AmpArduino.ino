@@ -13,6 +13,7 @@
 //        addopted layout to platformio
 // v1.1   moved back to interupt removing fastwrite
 // v1.2   added offset correction
+// v1.3   added delay in 230 power faillure detection
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // below definitions could be change by user depending on setup, no code changes needed
 //#define debugAmp                                    // Comment this line when debugAmp mode is not needed
@@ -31,7 +32,7 @@ const int highTemp = 60;                            // high temp cutoff in Celci
 const bool startUpAtPower = true;                   // if true amp starts if power applied, if false it will be in standby mode
 int startDelayTime = 20;                            // delay after power on of AMP, startup resistor is active, monitoring will start after this time and speakers could be connected 
 const int numberOfSensorsCh = 2;                    // number of temp sensors / side. value 1 or 2
-const char* toptekst = "  Aleph J, V 1.2";          // toptext, could be changed
+const char* toptekst = "  Aleph J, V 1.31";          // toptext, could be changed
 const char* middleTekst = "     AMP warming up";    // Version of the code";
 const char* bottemTekst = " " ;                     // as an example const char*bBottemTekst = "design by: Walter Widmer" ;
 const int numberOffDec = 2 ;                        // number of dec on the screen, could be 1 or 2
@@ -223,7 +224,8 @@ void shutDownAmp() {   // turn amp off, arduino itself and sensors stay active
 }
 
 void noPower () {  //   procedure to prevent thump if power fails
- // if (opStateRightCh && opStateLeftCh) {
+  delay(1);
+  if (!digitalRead(detect230V)) {                  // just check to be sure
     digitalWrite(relayOutputLeft, LOW);            // turn left channel off
     digitalWrite(relayOutputRight, LOW);           // turn right channel off
     digitalWrite(powerOnOff, LOW); 
@@ -231,7 +233,7 @@ void noPower () {  //   procedure to prevent thump if power fails
     opStateRightCh = false;
     ampInError = true;                            // amp is in error
     errorCode=0;
-//  }
+  }  
 }
 
 void defineStatusAmp() {    //procedure to verify status
